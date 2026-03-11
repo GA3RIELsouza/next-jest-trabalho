@@ -13,8 +13,24 @@ describe("authenticateUser", () => {
   it("lança AppError 401 quando credenciais são inválidas", async () => {
     await expect(
       authenticateUser({ email: "errado@test.com", password: "123456" })
-    ).rejects.toThrow(AppError);
+    ).rejects.toMatchObject({
+        status: 401
+    });
     // Verificar status 401
+  });
+
+  it("lança AppError 401 quando a senha está incorreta", async () => {
+    await expect(
+      authenticateUser({ email: "aluno@authtask.dev", password: "errada" })
+    ).rejects.toMatchObject({
+        status: 401
+    });
+    // Verificar status 401
+  });
+
+  it("sanitiza o user ID corretamente", () => {
+    const result = sanitizeUserId(" User@123 ");
+    expect(result).toBe("user_123");
   });
 });
 
