@@ -1,23 +1,48 @@
 import { render, screen } from "@testing-library/react";
-import DashboardPage from "../page";
+import LoginPage from "../page";
 import * as sessionService from "@/services/auth/session.service";
-import { redirect } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
+
+// Mocks do Next Navigation
+jest.mock("next/navigation", () => ({
+  redirect: jest.fn(),
+  useSearchParams: jest.fn(() => ({
+    get: jest.fn(),
+  })),
+  useRouter: () => ({
+    push: jest.fn(),
+    refresh: jest.fn(),
+  }),
+}));
 
 jest.mock("@/services/auth/session.service");
-jest.mock("next/navigation", () => ({ redirect: jest.fn() }));
-jest.mock("@/components/dashboard/DashboardClient", () => ({ DashboardClient: () => <div data-testid="client" /> }));
 
-describe("Página: Dashboard (Server Component)", () => {
-  it("redireciona para /login se não houver sessão", async () => {
-    (sessionService.getSessionUserFromCookies as jest.Mock).mockResolvedValue(null);
-    await DashboardPage();
-    expect(redirect).toHaveBeenCalledWith("/login");
+// Mock do LoginForm para evitar problemas com hooks internos durante o teste de página
+jest.mock("@/components/auth/LoginForm", () => ({
+  LoginForm: () => <div data-testid="login-form">Mock Login Form</div>,
+}));
+
+describe("Página: Login (Server Component)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it("renderiza o Dashboard se estiver logado", async () => {
+  it("redireciona para o dashboard se o usuário já estiver logado", async () => {
+    // Simula usuário logado
     (sessionService.getSessionUserFromCookies as jest.Mock).mockResolvedValue({ id: "1" });
-    const Page = await DashboardPage();
+    
+    await LoginPage();
+    
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("renderiza o formulário se o usuário não estiver logado", async () => {
+    // Simula usuário deslogado
+    (sessionService.getSessionUserFromCookies as jest.Mock).mockResolvedValue(null);
+    
+    const Page = await LoginPage();
     render(Page);
-    expect(screen.getByText("Dashboard protegido")).toBeInTheDocument();
+    
+    expect(screen.getByTestId("login-form")).toBeInTheDocument();
   });
 });
